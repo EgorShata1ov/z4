@@ -1,41 +1,23 @@
-from app.db.db import SessionLocal
-from app.db.models import Category, Book
-from app.db.crud import get_all_categories, get_all_books
+from fastapi import FastAPI
 
-def display_data():
-    db = SessionLocal()
-    
-    try:
-        print("\n" + "="*60)
-        print("КАТАЛОГ КНИГ")
-        print("="*60)
-        
-        categories = get_all_categories(db)
-        
-        for category in categories:
-            print(f"\nКатегория: {category.title}")
-            print("-"*50)
-            
-            books = category.books
-            if books:
-                for book in books:
-                    print(f"  Название: {book.title}")
-                    print(f"     Описание: {book.description}")
-                    print(f"     Цена: {book.price:.2f} руб.")
-                    print()
-            else:
-                print("  В этой категории нет книг")
-        
-        all_books = get_all_books(db)
-        print("="*60)
-        print(f"Всего книг: {len(all_books)}")
-        print(f"Всего категорий: {len(categories)}")
-        print("="*60 + "\n")
-        
-    except Exception as e:
-        print(f"Ошибка: {e}")
-    finally:
-        db.close()
+from app.db.db import Base, engine
+from app.api import books, categories
 
-if __name__ == "__main__":
-    display_data()
+# На всякий случай создаём таблицы, если их ещё нет в БД
+Base.metadata.create_all(bind=engine)
+
+app = FastAPI(
+    title="API каталога книг",
+    description="Учебный API для работы с книгами и категориями (FastAPI + SQLAlchemy + PostgreSQL)",
+    version="1.0.0",
+)
+
+# Подключаем роутеры
+app.include_router(categories.router)
+app.include_router(books.router)
+
+
+@app.get("/health", tags=["Служебные"], summary="Проверка работоспособности")
+def health():
+    """Простой эндпоинт для проверки, что сервис жив."""
+    return {"status": "ok"}
